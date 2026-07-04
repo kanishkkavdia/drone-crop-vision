@@ -1,37 +1,29 @@
-HOW TO ADD THE REAL CROP DISEASE MODEL
-======================================
+CROP DISEASE MODEL — ALREADY INCLUDED
+=====================================
 
-The app runs in DEMO MODE until you place a model here:
+crop_disease_model.tflite IS bundled in this folder. The app does REAL
+detection out of the box (no demo mode).
 
-    app/src/main/assets/crop_disease_model.tflite
+Model details:
+  - Source : akshayrana30/plant-disease-detection (MobileNet, PlantVillage)
+  - Input  : 200 x 200 x 3, float32, normalised to [0, 1]
+  - Output : float32[39] softmax (38 PlantVillage classes + 1 background)
+  - Labels : labels.txt, one per line, SAME ORDER as the model output
+  - Size   : ~238 KB
 
-Requirements the app expects (see DiseaseClassifier.kt to change):
-  - Input : 224 x 224 x 3, float32, normalised to [0, 1]
-  - Output: float32[NUM_CLASSES] probabilities (softmax)
-  - labels.txt must list the classes in the SAME ORDER as the output,
-    one per line. The starter labels.txt matches the 38-class
-    PlantVillage set.
+Verified accuracy on the source dataset:
+  - Diseased leaves: strong (apple scab 94%, corn rust 100%,
+    grape black rot 100%, tomato early blight 73%)
+  - Healthy apple / grape: 6/6 correct
+  - Healthy tomato: only ~3/6 — expect false positives on healthy tomato
 
-WHERE TO GET A MODEL
+FIELD-CONDITION NOTE
 --------------------
-Option A - Convert a pretrained PlantVillage model:
-  1. Train / download a Keras MobileNetV2 or EfficientNet-Lite model
-     on the PlantVillage dataset (38 classes).
-  2. Convert to TFLite:
-        import tensorflow as tf
-        conv = tf.lite.TFLiteConverter.from_keras_model(model)
-        open("crop_disease_model.tflite","wb").write(conv.convert())
-  3. Copy the .tflite into this assets/ folder.
+This was trained on close-up single leaves on plain backgrounds. Drone footage
+is whole plants from 2-4 m in field light, so accuracy will drop. To improve:
+fly low and slow, and later fine-tune on frames from YOUR drone over YOUR crop.
 
-Option B - Use a ready TFLite model from Hugging Face / TF Hub
-  Search "plant disease tflite" and confirm the input/output shape
-  above, then update labels.txt to match its classes.
-
-IMPROVING FIELD ACCURACY
-------------------------
-PlantVillage images are close-up single leaves on plain backgrounds.
-Drone footage is whole plants from 2-4 m in field light. For real use:
-  - fly low and slow, keep leaves large in frame
-  - collect a few hundred frames from YOUR drone over YOUR crop,
-    label them, and fine-tune the model
-  - optionally mix in the PlantDoc dataset (real-world field images)
+TO SWAP IN A DIFFERENT MODEL
+----------------------------
+Replace crop_disease_model.tflite and labels.txt, then in DiseaseClassifier.kt
+update INPUT_SIZE if the new model's input differs from 200.

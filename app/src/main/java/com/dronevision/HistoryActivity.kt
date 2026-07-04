@@ -62,7 +62,12 @@ class HistoryActivity : AppCompatActivity() {
             holder.title.text = item.summary
             holder.subtitle.text = DetectionStore.formatTime(item.timestampMillis)
             try {
-                holder.image.setImageBitmap(BitmapFactory.decodeFile(item.imagePath))
+                // Decode at 1/4 size: these are tiny thumbnails, full-res
+                // screenshots would exhaust memory after ~20 items.
+                val opts = BitmapFactory.Options().apply { inSampleSize = 4 }
+                holder.image.setImageBitmap(
+                    BitmapFactory.decodeFile(item.imagePath, opts)
+                )
             } catch (_: Exception) { }
             holder.itemView.setOnLongClickListener { onLongPress(item); true }
         }

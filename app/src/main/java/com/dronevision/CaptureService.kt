@@ -40,6 +40,7 @@ class CaptureService : Service() {
         private const val CHANNEL_ID = "capture_channel"
         private const val NOTIF_ID = 42
         private const val DETECT_INTERVAL_MS = 450L      // ~2 fps
+        private const val CLEAR_SETTLE_MS = 80L          // overlay redraw time
         private const val ANALYSIS_MAX_WIDTH = 640        // downscale target
 
         const val EXTRA_RESULT_CODE = "result_code"
@@ -69,6 +70,7 @@ class CaptureService : Service() {
     private var bgThread: HandlerThread? = null
     private var bgHandler: Handler? = null
     private var lastDetectTime = 0L
+    private var clearRequestedAt = 0L
 
     private var screenW = 0
     private var screenH = 0
@@ -146,8 +148,18 @@ class CaptureService : Service() {
         val image = try { reader.acquireLatestImage() } catch (e: Exception) { null }
         if (image == null) return
         try {
-            // Throttle: only run inference every DETECT_INTERVAL_MS.
-            if (now - lastDetectTime < DETECT_INTERVAL_MS) return
+            // Anti-feedback sequence: our own boxes must not appear in the
+            // frame we classify. Step 1: when it's time to detect, clear the
+            // overlay and wait. Step 2: after the overlay has redrawn empty,
+            // the next frame is clean -> run inference on it, then draw boxes.
+            if (clearRequestedAt == 0L) {
+                if (now - lastDetectTime < DETECT_INTERVAL_MS) return
+                overlay.update(emptyList())   // hide boxes (brief flicker)
+                clearRequestedAt = now
+                return
+            }
+            if (now - clearRequestedAt < CLEAR_SETTLE_MS) return // overlay still redrawing
+            clearRequestedAt = 0L
             lastDetectTime = now
 
             val planes = image.planes

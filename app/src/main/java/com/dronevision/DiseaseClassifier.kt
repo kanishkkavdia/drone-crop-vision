@@ -16,9 +16,10 @@ import java.nio.channels.FileChannel
  * the frame is split into a grid, each tile is classified, and tiles whose
  * top class is a disease (above a confidence threshold) become boxes.
  *
- * MODEL: expects "crop_disease_model.tflite" in assets, input 224x224x3 float
- * normalised to [0,1], output = float[NUM_CLASSES] probabilities. Class names
- * come from assets/labels.txt (one per line, same order as the model output).
+ * MODEL: "crop_disease_model.tflite" in assets — a MobileNet trained on the
+ * 38-class PlantVillage set + 1 background class (39 outputs). Input 200x200x3
+ * float normalised to [0,1], output = float[39] softmax probabilities. Class
+ * names come from assets/labels.txt (one per line, same order as the output).
  *
  * If the model file is missing, the classifier runs in DEMO MODE so the whole
  * capture/overlay/save pipeline still works — demo results are clearly marked.
@@ -28,11 +29,11 @@ class DiseaseClassifier(context: Context) {
     companion object {
         private const val TAG = "DiseaseClassifier"
         private const val MODEL_FILE = "crop_disease_model.tflite"
-        private const val INPUT_SIZE = 224
+        private const val INPUT_SIZE = 200
         private const val GRID = 3            // 3x3 tiles per frame
-        private const val THRESHOLD = 0.60f   // min confidence to draw a box
-        // A label is treated as "healthy" (no box drawn) if it contains this.
-        private const val HEALTHY_KEYWORD = "healthy"
+        private const val THRESHOLD = 0.65f   // min confidence to draw a box
+        // Labels containing any of these are treated as "no box" (not a disease).
+        private val SKIP_KEYWORDS = listOf("healthy", "background")
     }
 
     private var interpreter: Interpreter? = null
@@ -98,7 +99,8 @@ class DiseaseClassifier(context: Context) {
                 val conf = probs[bestIdx]
                 val label = labels.getOrElse(bestIdx) { "class_$bestIdx" }
 
-                if (conf >= THRESHOLD && !label.lowercase().contains(HEALTHY_KEYWORD)) {
+                val isSkip = SKIP_KEYWORDS.any { label.lowercase().contains(it) }
+                if (conf >= THRESHOLD && !isSkip) {
                     results.add(
                         Detection(label, conf, left, top, left + tileW, top + tileH)
                     )
