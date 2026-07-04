@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Drone Crop Vision</string>
+    <string name="history_title">Capture History</string>
+    <string name="main_hint">Open your drone\'s video app, then start detection here. Boxes appear over the drone feed.</string>
+    <string name="start_detection">Start Detection</string>
+    <string name="stop_detection">Stop Detection</string>
+    <string name="save_frame">Save Current Frame</string>
+    <string name="view_history">View History</string>
+    <string name="no_captures">No saved captures yet</string>
+    <string name="workflow_note">Workflow: 1) grant overlay + capture permissions  2) switch to the drone app  3) fly low and slow  4) tap Save when a disease box appears.</string>
+</resources>
